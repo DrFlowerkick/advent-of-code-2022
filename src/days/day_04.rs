@@ -60,10 +60,10 @@ pub fn day_04() -> Result<()> {
 
     println!("result day 04 part 1: {}", result_part1);
     assert_eq!(result_part1, 582);
-    
+
     println!("result day 04 part 2: {}", result_part2);
     assert_eq!(result_part2, 893);
-    
+
     Ok(())
 }
 
