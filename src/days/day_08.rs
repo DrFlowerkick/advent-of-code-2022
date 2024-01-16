@@ -51,19 +51,24 @@ impl<const X: usize, const Y: usize> Forest<X, Y> {
         self.visible.iter().filter(|(_, v)| **v).count()
     }
     fn calc_scenic_score(&mut self) {
-        for (position, pos_size) in self.trees.iter().filter(|(p, _)| p.map_position().is_center()) {
+        for (position, pos_size) in self
+            .trees
+            .iter()
+            .filter(|(p, _)| p.map_position().is_center())
+        {
             let mut scenic_scores: Vec<u32> = Vec::with_capacity(4);
             for orientation in position.available_cardinal_directions().iter() {
                 let mut scenic_score = 0;
                 for (_, size) in self.trees.iter_orientation(position, *orientation).skip(1) {
                     scenic_score += 1;
                     if size >= pos_size {
-                        break
+                        break;
                     }
                 }
                 scenic_scores.push(scenic_score);
             }
-            self.scenic_score.set(position, scenic_scores.iter().product());
+            self.scenic_score
+                .set(position, scenic_scores.iter().product());
         }
     }
     fn max_scenic_score(&self) -> u32 {
