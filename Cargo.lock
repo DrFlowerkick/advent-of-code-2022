@@ -7,6 +7,7 @@ name = "advent-of-code-2022"
 version = "0.1.0"
 dependencies = [
  "anyhow",
+ "evalexpr",
  "my_lib",
 ]
 
@@ -21,6 +22,12 @@ name = "cfg-if"
 version = "1.0.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "baf1de4339761588bc0619e3cbc0120ee582ebb74b53b4efbf79117bd2da40fd"
+
+[[package]]
+name = "evalexpr"
+version = "11.3.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "63b41cb9dd076076058a4523f009c900c582279536d0b2e45a29aa930e083cc5"
 
 [[package]]
 name = "getrandom"
