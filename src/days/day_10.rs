@@ -37,7 +37,8 @@ impl<const X: usize, const Y: usize> SignalRegister<X, Y> {
             } else {
                 '.'
             };
-            self.crt.set((pixel_x as usize, pixel_y as usize).into(), pixel);
+            self.crt
+                .set((pixel_x as usize, pixel_y as usize).into(), pixel);
         }
         self.current_cycle = next_cycle;
         if self.current_cycle >= self.check_cycle {
@@ -51,7 +52,7 @@ impl<const X: usize, const Y: usize> SignalRegister<X, Y> {
 #[derive(Debug)]
 struct RegisterCommand {
     cycle_time: i32,
-    delta_x: i32
+    delta_x: i32,
 }
 
 impl From<&str> for RegisterCommand {
@@ -59,17 +60,21 @@ impl From<&str> for RegisterCommand {
         let mut split_value = value.split_whitespace();
         if let Some(c) = split_value.next() {
             match c {
-                "noop" => return RegisterCommand {
-                    cycle_time: 1,
-                    delta_x: 0,
-                },
-                "addx" => if let Some(x) = split_value.next() {
-                    let delta_x = x.parse::<i32>().expect("bad input");
+                "noop" => {
                     return RegisterCommand {
-                        cycle_time: 2,
-                        delta_x,
-                    };
-                },
+                        cycle_time: 1,
+                        delta_x: 0,
+                    }
+                }
+                "addx" => {
+                    if let Some(x) = split_value.next() {
+                        let delta_x = x.parse::<i32>().expect("bad input");
+                        return RegisterCommand {
+                            cycle_time: 2,
+                            delta_x,
+                        };
+                    }
+                }
                 _ => (),
             }
         }
@@ -79,12 +84,13 @@ impl From<&str> for RegisterCommand {
 
 pub fn day_10() -> Result<()> {
     let input = include_str!("../../assets/day_10.txt");
-    let register_commands: Vec<RegisterCommand> = input.lines().map(RegisterCommand::from).collect();
+    let register_commands: Vec<RegisterCommand> =
+        input.lines().map(RegisterCommand::from).collect();
     let mut signal_register = SignalRegister::<X, Y>::new(20, 40);
     for rc in register_commands.iter() {
         signal_register.apply(rc);
     }
-    
+
     let result_part1 = signal_register.sum_check_cycle_x;
     println!("result day 10 part 1: {}", result_part1);
     assert_eq!(result_part1, 14_860);
@@ -110,17 +116,17 @@ mod tests {
     #[test]
     fn test_example_part() -> Result<()> {
         let input = include_str!("../../assets/day_10_example.txt");
-        let register_commands: Vec<RegisterCommand> = input.lines().map(RegisterCommand::from).collect();
+        let register_commands: Vec<RegisterCommand> =
+            input.lines().map(RegisterCommand::from).collect();
         //eprintln!("{:?}", &register_commands[..10]);
         let mut signal_register = SignalRegister::<X, Y>::new(20, 40);
         for rc in register_commands.iter() {
             signal_register.apply(rc);
         }
-        
+
         let result_part1 = signal_register.sum_check_cycle_x;
         println!("result example day 10 part 1: {}", result_part1);
         assert_eq!(result_part1, 13_140);
-
 
         let result_part2 = format!("{}", signal_register.crt);
         let test_part2 = "##..##..##..##..##..##..##..##..##..##..\n\
