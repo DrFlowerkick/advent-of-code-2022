@@ -4,15 +4,12 @@ use anyhow::Result;
 use evalexpr::eval_int;
 use std::collections::VecDeque;
 
-
 #[derive(Clone, Copy)]
 enum InspectionMethod {
     Devision(i64),
     #[cfg(feature = "long-run-time")]
     Modulo(i64),
 }
-
-
 
 #[derive(Debug)]
 struct Monkey {
@@ -104,13 +101,19 @@ impl Monkey {
     }
 }
 
-fn play_n_rounds(monkeys: &mut Vec<Monkey>, inspection_method: InspectionMethod, n_rounds: usize) -> i64 {
+fn play_n_rounds(
+    monkeys: &mut Vec<Monkey>,
+    inspection_method: InspectionMethod,
+    n_rounds: usize,
+) -> i64 {
     let mut max_inspections = 0;
     let mut second_max_inspections = 0;
     for round in 0..n_rounds {
         let mut monkey_index = 0;
         while monkey_index < monkeys.len() {
-            while let Some((catch_index, item)) = monkeys[monkey_index].throw_item(inspection_method) {
+            while let Some((catch_index, item)) =
+                monkeys[monkey_index].throw_item(inspection_method)
+            {
                 monkeys[catch_index].catch_item(item);
             }
             if round == n_rounds - 1 {
@@ -165,7 +168,6 @@ mod tests {
         let result_part1 = play_n_rounds(&mut monkeys, inspection_method, 20);
         println!("result example day 11 part 1: {}", result_part1);
         assert_eq!(result_part1, 10_605);
-
 
         let mut monkeys: Vec<Monkey> = input.split("\n\n").map(Monkey::from).collect();
         let super_divisor: i64 = monkeys.iter().map(|m| m.test_divisor).product();
