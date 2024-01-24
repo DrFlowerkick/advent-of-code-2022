@@ -1,8 +1,8 @@
 //!day_15.rs
 
 use anyhow::Result;
+use my_lib::my_geometry::{Diamond, Line};
 use my_lib::my_point::Point;
-use my_lib::my_geometry::{Line, Diamond};
 
 #[derive(Debug, Clone, Copy)]
 struct SensorBeacon {
@@ -48,16 +48,20 @@ fn calc_scanned_positions_of_row(sensor_beacons: &[SensorBeacon], row: i32) -> i
     let mut sensor_beacons_in_row: Vec<Point> = Vec::with_capacity(sensor_beacons.len());
     let row_line = Line::new(0, 1, -row);
     for sb in sensor_beacons.iter() {
-        let mut intersection_x: Vec<i32> = sb.sensor.diamond_line_intersection(&row_line).iter().map(|p| p.x).collect();
-        match intersection_x.len() {
-            2 => {
-                intersection_x.sort();
-                min_x = min_x.min(intersection_x[0]);
-                max_x = max_x.max(intersection_x[1]);
-            },
-            _ => (),
+        let mut intersection_x: Vec<i32> = sb
+            .sensor
+            .diamond_line_intersection(&row_line)
+            .iter()
+            .map(|p| p.x)
+            .collect();
+        if intersection_x.len() == 2 {
+            intersection_x.sort();
+            min_x = min_x.min(intersection_x[0]);
+            max_x = max_x.max(intersection_x[1]);
         }
-        if sb.sensor.get_center().y == row && !sensor_beacons_in_row.contains(&sb.sensor.get_center()) {
+        if sb.sensor.get_center().y == row
+            && !sensor_beacons_in_row.contains(&sb.sensor.get_center())
+        {
             sensor_beacons_in_row.push(sb.sensor.get_center());
         }
         if sb.beacon.y == row && !sensor_beacons_in_row.contains(&sb.beacon) {
