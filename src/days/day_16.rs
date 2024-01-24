@@ -83,184 +83,90 @@ impl ValveNetwork {
             })
             .map(|((_, n2), d)| (*n2, *d))
     }
-    fn best_pressure_release(&self, minimum_valve_value: u32) -> u32 {
-        let minutes: u32 = 30;
-        let mut seen_nodes: Vec<NodeIndex<u32>> = Vec::with_capacity(self.valves.node_count());
-        let mut max_pressure = 0;
+    fn best_pressure_release(&self, minutes: u32, minimum_valve_value: u32) -> HashMap<u64, u32> {
+        let mut pressure_hash: HashMap<u64, u32> = HashMap::new();
         for (next_node, distance) in
             self.iter_pair_distance(self.initial_node_id, minutes, minimum_valve_value)
         {
-            max_pressure = max_pressure.max(self.pressure_release_recursive(
+            self.pressure_release_recursive(
                 next_node,
                 minutes - distance,
-                &mut seen_nodes,
+                0,
+                0,
+                &mut pressure_hash,
                 minimum_valve_value,
-            ));
+            );
         }
-        max_pressure
+        pressure_hash
     }
     fn pressure_release_recursive(
         &self,
         current_node: NodeIndex<u32>,
         mut remaining_minutes: u32,
-        seen_nodes: &mut Vec<NodeIndex<u32>>,
+        mut bit_mask: u64,
+        mut pressure: u32,
+        pressure_hash: &mut HashMap<u64, u32>,
         minimum_valve_value: u32,
-    ) -> u32 {
+    ) {
         remaining_minutes -= 1;
-        let current_pressure = self.valves.node_weight(current_node).unwrap() * remaining_minutes;
-        if remaining_minutes <= 1 {
-            return current_pressure;
+        pressure += self.valves.node_weight(current_node).unwrap() * remaining_minutes;
+        bit_mask += 2_u64.pow(current_node.index() as u32);
+        if let Some(p) = pressure_hash.get_mut(&bit_mask) {
+            *p = pressure.max(*p);
+        } else {
+            pressure_hash.insert(bit_mask, pressure);
         }
-        seen_nodes.push(current_node);
-        let mut max_next_pressure = 0;
+        if remaining_minutes <= 1 {
+            return;
+        }
         for (next_node, distance) in
             self.iter_pair_distance(current_node, remaining_minutes, minimum_valve_value)
         {
-            if !seen_nodes.contains(&next_node) {
-                max_next_pressure = max_next_pressure.max(self.pressure_release_recursive(
+            if 2_u64.pow(next_node.index() as u32) & bit_mask == 0 {
+                self.pressure_release_recursive(
                     next_node,
                     remaining_minutes - distance,
-                    seen_nodes,
+                    bit_mask,
+                    pressure,
+                    pressure_hash,
                     minimum_valve_value,
-                ));
+                );
             }
         }
-        seen_nodes.pop();
-        current_pressure + max_next_pressure
     }
     fn best_pressure_release_pair_working(&self, minimum_valve_value: u32) -> u32 {
         let minutes: u32 = 26;
-        let mut seen_nodes: Vec<NodeIndex<u32>> = Vec::with_capacity(self.valves.node_count());
+        let pressure_hash = self.best_pressure_release(minutes, minimum_valve_value);
         let mut max_pressure = 0;
-        for (i, (my_next_node, my_distance)) in self
-            .iter_pair_distance(self.initial_node_id, minutes, minimum_valve_value)
-            .enumerate()
-        {
-            for (elephant_next_node, elephant_distance) in self
-                .iter_pair_distance(self.initial_node_id, minutes, minimum_valve_value)
-                .skip(i + 1)
-            {
-                max_pressure = max_pressure.max(self.pressure_release_pair_working_recursive(
-                    my_next_node,
-                    elephant_next_node,
-                    minutes - my_distance,
-                    minutes - elephant_distance,
-                    &mut seen_nodes,
-                    minimum_valve_value,
-                ));
+        for (i, (bm_1, p1)) in pressure_hash.iter().enumerate() {
+            for (bm_2, p2) in pressure_hash.iter().skip(i + 1) {
+                if bm_1 & bm_2 == 0 {
+                    max_pressure = max_pressure.max(*p1 + *p2);
+                }
             }
         }
         max_pressure
-    }
-    fn pressure_release_pair_working_recursive(
-        &self,
-        my_node: NodeIndex<u32>,
-        elephant_node: NodeIndex<u32>,
-        mut my_remaining_minutes: u32,
-        mut elephant_remaining_minutes: u32,
-        seen_nodes: &mut Vec<NodeIndex<u32>>,
-        minimum_valve_value: u32,
-    ) -> u32 {
-        let my_pressure_release = if !seen_nodes.contains(&my_node) {
-            my_remaining_minutes -= 1;
-            self.valves.node_weight(my_node).unwrap() * my_remaining_minutes
-        } else {
-            0
-        };
-        let elephant_pressure_release = if !seen_nodes.contains(&elephant_node) {
-            elephant_remaining_minutes -= 1;
-            self.valves.node_weight(elephant_node).unwrap() * elephant_remaining_minutes
-        } else {
-            0
-        };
-        seen_nodes.push(my_node);
-        seen_nodes.push(elephant_node);
-        let mut max_next_pressure = 0;
-        match (my_remaining_minutes > 1, elephant_remaining_minutes > 1) {
-            (false, false) => (),
-            (true, false) => {
-                for (next_node, distance) in
-                    self.iter_pair_distance(my_node, my_remaining_minutes, minimum_valve_value)
-                {
-                    if !seen_nodes.contains(&next_node) {
-                        max_next_pressure =
-                            max_next_pressure.max(self.pressure_release_pair_working_recursive(
-                                next_node,
-                                elephant_node,
-                                my_remaining_minutes - distance,
-                                elephant_remaining_minutes,
-                                seen_nodes,
-                                minimum_valve_value,
-                            ));
-                    }
-                }
-            }
-            (false, true) => {
-                for (next_node, distance) in self.iter_pair_distance(
-                    elephant_node,
-                    elephant_remaining_minutes,
-                    minimum_valve_value,
-                ) {
-                    if !seen_nodes.contains(&next_node) {
-                        max_next_pressure =
-                            max_next_pressure.max(self.pressure_release_pair_working_recursive(
-                                my_node,
-                                next_node,
-                                my_remaining_minutes,
-                                elephant_remaining_minutes - distance,
-                                seen_nodes,
-                                minimum_valve_value,
-                            ));
-                    }
-                }
-            }
-            (true, true) => {
-                for (my_next_node, my_distance) in
-                    self.iter_pair_distance(my_node, my_remaining_minutes, minimum_valve_value)
-                {
-                    if !seen_nodes.contains(&my_next_node) {
-                        for (elephant_next_node, elephant_distance) in self.iter_pair_distance(
-                            elephant_node,
-                            elephant_remaining_minutes,
-                            minimum_valve_value,
-                        ) {
-                            if !seen_nodes.contains(&elephant_next_node)
-                                && elephant_next_node != my_next_node
-                            {
-                                max_next_pressure = max_next_pressure.max(
-                                    self.pressure_release_pair_working_recursive(
-                                        my_next_node,
-                                        elephant_next_node,
-                                        my_remaining_minutes - my_distance,
-                                        elephant_remaining_minutes - elephant_distance,
-                                        seen_nodes,
-                                        minimum_valve_value,
-                                    ),
-                                );
-                            }
-                        }
-                    }
-                }
-            }
-        }
-        seen_nodes.pop();
-        seen_nodes.pop();
-        my_pressure_release + elephant_pressure_release + max_next_pressure
     }
 }
 
 pub fn day_16() -> Result<()> {
     let input = include_str!("../../assets/day_16.txt");
     let valve_network = ValveNetwork::from(input);
+    eprintln!("number of nodes: {}", valve_network.valves.node_count());
+    let minutes = 30;
     let minimum_valve_value = 3;
-    let result_part1 = valve_network.best_pressure_release(minimum_valve_value);
+    let result_part1 = *valve_network
+        .best_pressure_release(minutes, minimum_valve_value)
+        .values()
+        .max()
+        .unwrap();
     println!("result day 16 part 1: {}", result_part1);
     assert_eq!(result_part1, 2_077);
 
     let minimum_valve_value = 1;
     let result_part2 = valve_network.best_pressure_release_pair_working(minimum_valve_value);
     println!("result day 16 part 2: {}", result_part2);
-    assert_eq!(result_part2, 2_732);
+    assert_eq!(result_part2, 2_741);
 
     Ok(())
 }
@@ -271,15 +177,30 @@ mod tests {
     use super::*;
 
     #[test]
+    fn text_bitmask() {
+        let input = include_str!("../../assets/day_16_example.txt");
+        let valve_network = ValveNetwork::from(input);
+        let node_count = valve_network.valves.node_count();
+        let mut bit_mask: u64 = 0;
+        for node in valve_network.valves.node_indices() {
+            bit_mask += 2_u64.pow(node.index() as u32);
+        }
+        assert_eq!(bit_mask, 2_u64.pow(node_count as u32) - 1);
+        assert!(bit_mask & 2_u64.pow(valve_network.initial_node_id.index() as u32) > 0);
+        assert!(bit_mask & 2_u64.pow(node_count as u32) == 0);
+    }
+
+    #[test]
     fn test_example() -> Result<()> {
         let input = include_str!("../../assets/day_16_example.txt");
         let valve_network = ValveNetwork::from(input);
-        //eprintln!("valves");
-        //eprintln!("{:?}", valve_network.valves);
-        //eprintln!("pair_distance");
-        //eprintln!("{:?}", valve_network.pair_distance);
+        let minutes = 30;
         let minimum_valve_value = 2;
-        let result_part1 = valve_network.best_pressure_release(minimum_valve_value);
+        let result_part1 = *valve_network
+            .best_pressure_release(minutes, minimum_valve_value)
+            .values()
+            .max()
+            .unwrap();
         println!("result example day 16 part 1: {}", result_part1);
         assert_eq!(result_part1, 1_651);
 
