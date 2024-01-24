@@ -5,17 +5,16 @@ use petgraph::algo::floyd_warshall;
 use petgraph::graph::{NodeIndex, UnGraph};
 use std::collections::HashMap;
 
-struct ValveNetwork<'a> {
-    valves: UnGraph<(&'a str, u32), u32>,
+struct ValveNetwork {
+    valves: UnGraph<u32, u32>,
     initial_node_id: NodeIndex<u32>,
     pair_distance: HashMap<(NodeIndex<u32>, NodeIndex<u32>), u32>,
 }
 
-impl<'a> From<&'a str> for ValveNetwork<'a> {
-    fn from(value: &'a str) -> Self {
+impl From<&str> for ValveNetwork {
+    fn from(value: &str) -> Self {
         let base_capacity = value.lines().count();
-        let mut valves: UnGraph<(&str, u32), u32> =
-            UnGraph::with_capacity(base_capacity, base_capacity);
+        let mut valves: UnGraph<u32, u32> = UnGraph::with_capacity(base_capacity, base_capacity);
         let mut labels: HashMap<&str, NodeIndex<u32>> = HashMap::new();
         // add nodes
         for line in value.lines() {
@@ -32,9 +31,10 @@ impl<'a> From<&'a str> for ValveNetwork<'a> {
                         .expect("bad input")
                 })
                 .unwrap();
-            let node_id = valves.add_node((valve_label, valve_value));
+            let node_id = valves.add_node(valve_value);
             labels.insert(valve_label, node_id);
         }
+        let initial_node_id = *labels.get("AA").unwrap();
         // add edges
         let mut count_edge_update = 0;
         for line in value.lines() {
@@ -48,16 +48,26 @@ impl<'a> From<&'a str> for ValveNetwork<'a> {
             }
         }
         assert_eq!(valves.edge_count(), count_edge_update / 2);
-        let pair_distance = floyd_warshall(&valves, |e| *e.weight()).expect("bad floyd warshall");
+        let pair_distance: HashMap<(NodeIndex<u32>, NodeIndex<u32>), u32> =
+            floyd_warshall(&valves, |e| *e.weight())
+                .expect("bad floyd warshall")
+                .iter()
+                .filter(|((n1, n2), _)| {
+                    n1 != n2
+                        && (*n1 == initial_node_id || *valves.node_weight(*n1).unwrap() > 0)
+                        && *valves.node_weight(*n2).unwrap() > 0
+                })
+                .map(|((n1, n2), d)| ((*n1, *n2), *d))
+                .collect();
         ValveNetwork {
             valves,
-            initial_node_id: *labels.get("AA").unwrap(),
+            initial_node_id,
             pair_distance,
         }
     }
 }
 
-impl<'a> ValveNetwork<'a> {
+impl ValveNetwork {
     fn iter_pair_distance(
         &self,
         node: NodeIndex<u32>,
@@ -67,16 +77,11 @@ impl<'a> ValveNetwork<'a> {
         self.pair_distance
             .iter()
             .filter(move |((n1, n2), d)| {
-                **d > 0 && **d < remaining_minutes - 1 && (*n1 == node || *n2 == node)
+                **d < remaining_minutes - 1
+                    && *n1 == node
+                    && *self.valves.node_weight(*n2).unwrap() >= minimum_valve_value
             })
-            .filter_map(move |((n1, n2), d)| {
-                let next_node = if node == *n1 { *n2 } else { *n1 };
-                if self.valves.node_weight(next_node).unwrap().1 >= minimum_valve_value {
-                    Some((next_node, *d))
-                } else {
-                    None
-                }
-            })
+            .map(|((_, n2), d)| (*n2, *d))
     }
     fn best_pressure_release(&self, minimum_valve_value: u32) -> u32 {
         let minutes: u32 = 30;
@@ -102,7 +107,7 @@ impl<'a> ValveNetwork<'a> {
         minimum_valve_value: u32,
     ) -> u32 {
         remaining_minutes -= 1;
-        let current_pressure = self.valves.node_weight(current_node).unwrap().1 * remaining_minutes;
+        let current_pressure = self.valves.node_weight(current_node).unwrap() * remaining_minutes;
         if remaining_minutes <= 1 {
             return current_pressure;
         }
@@ -158,13 +163,13 @@ impl<'a> ValveNetwork<'a> {
     ) -> u32 {
         let my_pressure_release = if !seen_nodes.contains(&my_node) {
             my_remaining_minutes -= 1;
-            self.valves.node_weight(my_node).unwrap().1 * my_remaining_minutes
+            self.valves.node_weight(my_node).unwrap() * my_remaining_minutes
         } else {
             0
         };
         let elephant_pressure_release = if !seen_nodes.contains(&elephant_node) {
             elephant_remaining_minutes -= 1;
-            self.valves.node_weight(elephant_node).unwrap().1 * elephant_remaining_minutes
+            self.valves.node_weight(elephant_node).unwrap() * elephant_remaining_minutes
         } else {
             0
         };
@@ -249,12 +254,13 @@ pub fn day_16() -> Result<()> {
     let valve_network = ValveNetwork::from(input);
     let minimum_valve_value = 3;
     let result_part1 = valve_network.best_pressure_release(minimum_valve_value);
-    println!("result day 15 part 1: {}", result_part1);
+    println!("result day 16 part 1: {}", result_part1);
     assert_eq!(result_part1, 2_077);
 
-    //let result_part2 = 0;
-    //println!("result day 15 part 2: {}", result_part2);
-    //assert_eq!(result_part2, 13_172_087_230_812);
+    let minimum_valve_value = 1;
+    let result_part2 = valve_network.best_pressure_release_pair_working(minimum_valve_value);
+    println!("result day 16 part 2: {}", result_part2);
+    assert_eq!(result_part2, 2_732);
 
     Ok(())
 }
