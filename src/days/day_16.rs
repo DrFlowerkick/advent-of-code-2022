@@ -152,7 +152,6 @@ impl ValveNetwork {
 pub fn day_16() -> Result<()> {
     let input = include_str!("../../assets/day_16.txt");
     let valve_network = ValveNetwork::from(input);
-    eprintln!("number of nodes: {}", valve_network.valves.node_count());
     let minutes = 30;
     let minimum_valve_value = 3;
     let result_part1 = *valve_network
