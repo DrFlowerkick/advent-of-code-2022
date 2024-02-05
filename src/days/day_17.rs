@@ -1,6 +1,7 @@
 //!day_17.rs
 
 use anyhow::Result;
+use std::collections::{hash_map::Entry, HashMap};
 
 #[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
 struct Point {
@@ -10,70 +11,13 @@ struct Point {
 
 impl Point {
     fn new(x: isize, y: isize) -> Self {
-        Self {x, y}
+        Self { x, y }
     }
     fn add(&self, other: Self) -> Self {
         Self {
             x: self.x + other.x,
             y: self.y + other.y,
         }
-    }
-    fn substract(&self, other: Self) -> Self {
-        Self {
-            x: self.x - other.x,
-            y: self.y - other.y,
-        }
-    }
-    fn iter_neighbors(&self, start_from_neighbor: Point) -> impl Iterator<Item = Point> {
-        IterPointNeighbors::new(*self, start_from_neighbor)
-    }
-}
-
-struct IterPointNeighbors {
-    center: Point,
-    start_from_neighbor: Point,
-    current_delta: Point,
-    finished: bool,
-}
-
-impl IterPointNeighbors {
-    fn new(center: Point, start_from_neighbor: Point) -> Self {
-        let delta = start_from_neighbor.substract(center);
-        assert!(delta.x >= -1 && delta.x <=1 && delta.y >= -1 && delta.y <= 1);
-        Self {
-            center,
-            start_from_neighbor,
-            current_delta: delta,
-            finished: false,
-        }
-    }
-    fn next_delta(&mut self) -> Point {
-        let deltas = [
-            Point::new(0, 1),
-            Point::new(1, 1),
-            Point::new(1, 0),
-            Point::new(1, -1),
-            Point::new(0, -1),
-            Point::new(-1, -1),
-            Point::new(-1, 0),
-            Point::new(-1, 1),
-        ];
-        let index = (deltas.iter().position(|d| *d == self.current_delta).unwrap() + 1) % deltas.len();
-        self.current_delta = deltas[index];
-        self.current_delta
-    }
-}
-
-impl Iterator for IterPointNeighbors {
-    type Item = Point;
-    fn next(&mut self) -> Option<Self::Item> {
-        if self.finished {
-            return None;
-        }
-        let delta = self.next_delta();
-        let next_point = self.center.add(delta);
-        self.finished = next_point == self.start_from_neighbor;
-        Some(next_point)
     }
 }
 
@@ -90,7 +34,7 @@ impl Block {
     fn init() -> Self {
         Self::Square(Point::default())
     }
-    fn spawn_new_block(&mut self, highest_block: isize) -> Self {
+    fn spawn_new_block(&mut self, highest_block: isize) -> (u8, Self) {
         let point = Point::new(3, highest_block + 4);
         *self = match self {
             Self::HorizontalLine(_) => Self::Plus(point),
@@ -99,7 +43,13 @@ impl Block {
             Self::VerticalLine(_) => Self::Square(point),
             Self::Square(_) => Self::HorizontalLine(point),
         };
-        *self
+        match self {
+            Self::HorizontalLine(_) => (0, *self),
+            Self::Plus(_) => (1, *self),
+            Self::J(_) => (2, *self),
+            Self::VerticalLine(_) => (3, *self),
+            Self::Square(_) => (4, *self),
+        }
     }
     fn left_rock(&self) -> isize {
         match self {
@@ -212,6 +162,9 @@ impl Block {
 struct Chamber {
     rocks: Vec<Point>,
     highest_block: isize,
+    top_rocks: [isize; 7],
+    normalized_top_rocks: [isize; 7],
+    offset: isize,
 }
 
 impl Chamber {
@@ -223,6 +176,9 @@ impl Chamber {
         Self {
             rocks,
             highest_block: 0,
+            top_rocks: [0; 7],
+            normalized_top_rocks: [0; 7],
+            offset: 0,
         }
     }
     fn check_block(&self, block: &Block) -> bool {
@@ -242,17 +198,24 @@ impl Chamber {
     fn add_block(&mut self, block: &Block) {
         for rock in block.rock_positions().iter() {
             self.rocks.push(*rock);
+            let index = (rock.x - 1) as usize;
+            self.top_rocks[index] = self.top_rocks[index].max(rock.y);
         }
         self.highest_block = self.highest_block.max(block.top_rock());
+        for (i, tr) in self.top_rocks.iter().enumerate() {
+            self.normalized_top_rocks[i] = tr - self.highest_block;
+        }
     }
     fn falling_blocks(&mut self, num_blocks: isize, jet_streams: &str) -> isize {
         assert!(num_blocks > 0);
         let mut block_source = Block::init();
         let mut block_counter = 0;
-        let mut jet_iter = jet_streams.chars().map(|c| c == '>').cycle();
+        let mut seen_sequences: HashMap<(u8, usize, [isize; 7]), (isize, isize)> =
+            HashMap::with_capacity(2_022);
+        let mut jet_iter = jet_streams.chars().map(|c| c == '>').enumerate().cycle();
         while block_counter < num_blocks {
-            let mut block = block_source.spawn_new_block(self.highest_block);
-            for jet in &mut jet_iter {
+            let (block_index, mut block) = block_source.spawn_new_block(self.highest_block);
+            for (jet_index, jet) in &mut jet_iter {
                 let jet_block = block.apply_jet(jet);
                 if self.check_block(&jet_block) {
                     block = jet_block;
@@ -262,55 +225,30 @@ impl Chamber {
                     block = falling_block;
                 } else {
                     self.add_block(&block);
+                    block_counter += 1;
+                    if self.offset == 0 {
+                        let key = (block_index, jet_index, self.normalized_top_rocks);
+                        if let Entry::Vacant(e) = seen_sequences.entry(key) {
+                            e.insert((block_counter, self.highest_block));
+                        } else {
+                            if let Some((last_block_counter, last_highest_block)) =
+                                seen_sequences.get(&key)
+                            {
+                                // calc offset and increment block_counter with number of sequence blocks
+                                let num_sequences = (num_blocks - block_counter)
+                                    / (block_counter - last_block_counter);
+                                self.offset =
+                                    num_sequences * (self.highest_block - last_highest_block);
+                                block_counter +=
+                                    num_sequences * (block_counter - last_block_counter);
+                            }
+                        }
+                    }
                     break;
                 }
             }
-            //self.rocks = self.iter_outer_rim().collect();
-            block_counter += 1;
         }
-        self.highest_block
-    }
-    fn _iter_outer_rim(&self) -> impl Iterator<Item = Point> + '_ {
-        IterOuterRim::_new(self)
-    }
-}
-
-struct IterOuterRim<'a> {
-    chamber: &'a Chamber,
-    current_point_index: usize,
-    last_point: Point,
-    finished: bool,
-}
-
-impl<'a> IterOuterRim<'a> {
-    fn _new(chamber: &'a Chamber) -> Self {
-        let current_point_index = chamber.rocks.iter().enumerate().filter(|(_, p)| p.x == 1).max_by_key(|(_, p)| p.y).unwrap().0;
-        let last_point = chamber.rocks[current_point_index].add(Point::new(0, 1));
-        Self {
-            chamber,
-            current_point_index,
-            last_point,
-            finished: false,
-        }
-    }
-}
-
-impl<'a> Iterator for IterOuterRim<'a> {
-    type Item = Point;
-    fn next(&mut self) -> Option<Self::Item> {
-        if self.finished {
-            return None;
-        }
-        let current_point = self.chamber.rocks[self.current_point_index];
-        for point in current_point.iter_neighbors(self.last_point) {
-            if let Some(next_index) = self.chamber.rocks.iter().position(|p| *p == point) {
-                self.current_point_index = next_index;
-                self.last_point = current_point;
-                break;
-            }
-        }
-        self.finished = current_point.x == 7;
-        Some(current_point)
+        self.highest_block + self.offset
     }
 }
 
@@ -325,7 +263,7 @@ pub fn day_17() -> Result<()> {
     let mut chamber = Chamber::new();
     let result_part1 = chamber.falling_blocks(num_rocks, input);
     println!("result day 17 part 2: {}", result_part1);
-    //assert_eq!(result_part1, 3_193);
+    assert_eq!(result_part1, 1_577_650_429_835);
 
     Ok(())
 }
@@ -349,10 +287,5 @@ mod tests {
         println!("result example day 17 part 2: {}", result_part1);
         assert_eq!(result_part1, 1_514_285_714_288);
         Ok(())
-    }
-
-    #[test]
-    fn debug_falling_rocks() {
-
     }
 }
