@@ -230,18 +230,14 @@ impl Chamber {
                         let key = (block_index, jet_index, self.normalized_top_rocks);
                         if let Entry::Vacant(e) = seen_sequences.entry(key) {
                             e.insert((block_counter, self.highest_block));
-                        } else {
-                            if let Some((last_block_counter, last_highest_block)) =
-                                seen_sequences.get(&key)
-                            {
-                                // calc offset and increment block_counter with number of sequence blocks
-                                let num_sequences = (num_blocks - block_counter)
-                                    / (block_counter - last_block_counter);
-                                self.offset =
-                                    num_sequences * (self.highest_block - last_highest_block);
-                                block_counter +=
-                                    num_sequences * (block_counter - last_block_counter);
-                            }
+                        } else if let Some((last_block_counter, last_highest_block)) =
+                            seen_sequences.get(&key)
+                        {
+                            // calc offset and increment block_counter with number of sequence blocks
+                            let num_sequences =
+                                (num_blocks - block_counter) / (block_counter - last_block_counter);
+                            self.offset = num_sequences * (self.highest_block - last_highest_block);
+                            block_counter += num_sequences * (block_counter - last_block_counter);
                         }
                     }
                     break;
