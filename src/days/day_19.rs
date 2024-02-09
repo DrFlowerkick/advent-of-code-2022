@@ -201,8 +201,7 @@ impl GeodeCollection {
             return *max_geode_collection;
         }
 
-        let mut max_geode_collection =
-            self.n_geode_robots * minutes + self.geodes;
+        let mut max_geode_collection = self.n_geode_robots * minutes + self.geodes;
 
         for (action, remaining_minutes) in self.actions(minutes).iter() {
             max_geode_collection =
@@ -222,14 +221,21 @@ pub fn day_19() -> Result<()> {
         .map(GeodeCollection::new)
         .collect();
     let minutes = 24;
-    let result_part1: u64 = geode_collectors.iter().map(|gc| gc.execute(minutes) * gc.blue_print.id).sum();
+    let result_part1: u64 = geode_collectors
+        .iter()
+        .map(|gc| gc.execute(minutes) * gc.blue_print.id)
+        .sum();
     println!("result day 19 part 1: {}", result_part1);
     assert_eq!(result_part1, 2_341);
-    
+
     #[cfg(feature = "long-run-time")]
     {
         let minutes = 32;
-        let result_part2: u64 = geode_collectors.iter().take(3).map(|gc| gc.execute(minutes)).product();
+        let result_part2: u64 = geode_collectors
+            .iter()
+            .take(3)
+            .map(|gc| gc.execute(minutes))
+            .product();
         println!("result day 19 part 2: {}", result_part2);
         assert_eq!(result_part2, 3_689);
     }
@@ -263,7 +269,10 @@ mod tests {
             .map(GeodeCollection::new)
             .collect();
         let minutes = 24;
-        let result_part1: u64 = geode_collectors.iter().map(|gc| gc.execute(minutes) * gc.blue_print.id).sum();
+        let result_part1: u64 = geode_collectors
+            .iter()
+            .map(|gc| gc.execute(minutes) * gc.blue_print.id)
+            .sum();
         println!("result example day 19 part 1: {}", result_part1);
         assert_eq!(result_part1, 33);
         // part 2
