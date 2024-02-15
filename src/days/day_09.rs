@@ -1,7 +1,7 @@
 //!day_09.rs
 
 use anyhow::Result;
-use my_lib::my_point::Point;
+use my_lib::my_geometry::my_point::Point;
 
 struct RopeAction {
     direction: Point,

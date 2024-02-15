@@ -20,7 +20,11 @@ fn eval_monkeys(key: String, monkeys: &HashMap<String, String>) -> Result<i64> {
     }
 }
 
-fn eval_non_humn_expr<'a>(key: &String, humn_key: &String, monkeys: &'a HashMap<String, String>) -> Result<(i64, bool, &'a str)> {
+fn eval_non_humn_expr<'a>(
+    key: &String,
+    humn_key: &String,
+    monkeys: &'a HashMap<String, String>,
+) -> Result<(i64, bool, &'a str)> {
     let value = monkeys.get(key).ok_or(anyhow!("key not found"))?;
     let mut expression_iter = value.split_whitespace();
     let left = expression_iter.next().unwrap();
@@ -40,20 +44,23 @@ fn eval_human(monkeys: &HashMap<String, String>) -> Result<i64> {
     let mut current_key = &String::from("humn");
     let mut humn_keys: Vec<&String> = vec![current_key];
     loop {
-        let (key, _) = monkeys.iter().find(|(_, v)| v.contains(current_key)).unwrap();
+        let (key, _) = monkeys
+            .iter()
+            .find(|(_, v)| v.contains(current_key))
+            .unwrap();
         current_key = key;
         if key == "root" {
-            break
+            break;
         }
         humn_keys.push(key);
     }
     // 2. caculate comparision value
     let humn_key = humn_keys.pop().unwrap();
-    let (mut eval_value, ..) = eval_non_humn_expr(&current_key, humn_key, monkeys)?;
+    let (mut eval_value, ..) = eval_non_humn_expr(current_key, humn_key, monkeys)?;
     // 3. move down to humn expression and formulate eval_string
     current_key = humn_key;
     while let Some(humn_key) = humn_keys.pop() {
-        let (next_eval_value, right, symbol) = eval_non_humn_expr(&current_key, humn_key, monkeys)?;
+        let (next_eval_value, right, symbol) = eval_non_humn_expr(current_key, humn_key, monkeys)?;
         eval_value = match (right, symbol) {
             (_, "+") => eval_value - next_eval_value,
             (_, "*") => eval_value / next_eval_value,
@@ -61,7 +68,7 @@ fn eval_human(monkeys: &HashMap<String, String>) -> Result<i64> {
             (true, "-") => next_eval_value - eval_value,
             (false, "/") => eval_value * next_eval_value,
             (true, "/") => next_eval_value / eval_value,
-            _ => return Err(anyhow!("internal calculation error"))
+            _ => return Err(anyhow!("internal calculation error")),
         };
         current_key = humn_key;
     }
@@ -83,7 +90,7 @@ pub fn day_21() -> Result<()> {
     let result_part1 = eval_monkeys(String::from("root"), &monkeys)?;
     println!("result day 21 part 1: {}", result_part1);
     assert_eq!(result_part1, 232_974_643_455_000);
-        
+
     let result_part2 = eval_human(&monkeys)?;
     println!("result day 21 part 2: {}", result_part2);
     assert_eq!(result_part2, 3_740_214_169_961);
@@ -111,7 +118,7 @@ mod tests {
         let result_part1 = eval_monkeys(String::from("root"), &monkeys)?;
         println!("result example day 21 part 1: {}", result_part1);
         assert_eq!(result_part1, 152);
-        
+
         let result_part2 = eval_human(&monkeys)?;
         println!("result example day 21 part 2: {}", result_part2);
         assert_eq!(result_part2, 301);
