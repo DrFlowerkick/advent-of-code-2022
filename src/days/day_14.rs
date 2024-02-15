@@ -1,7 +1,7 @@
 //!day_14.rs
 
 use anyhow::Result;
-use my_lib::my_point::Point;
+use my_lib::my_geometry::my_point::Point;
 use std::cmp::Ordering;
 
 struct RockAndSand {
@@ -17,8 +17,8 @@ impl From<&str> for RockAndSand {
             let mut rock_corners_iter = line.split(" -> ").filter_map(|rc| {
                 rc.split_once(',').map(|(x, y)| {
                     Point::from((
-                        x.parse::<i32>().expect("bad input"),
-                        y.parse::<i32>().expect("bad input"),
+                        x.parse::<i64>().expect("bad input"),
+                        y.parse::<i64>().expect("bad input"),
                     ))
                 })
             });
@@ -58,8 +58,8 @@ impl From<&str> for RockAndSand {
 struct FallingSand<'a> {
     rock_and_sand: &'a RockAndSand,
     sand_unit: Point,
-    lowest_rock: i32,
-    bottom: Option<i32>,
+    lowest_rock: i64,
+    bottom: Option<i64>,
     finished: bool,
 }
 

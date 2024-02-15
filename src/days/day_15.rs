@@ -1,8 +1,7 @@
 //!day_15.rs
 
 use anyhow::Result;
-use my_lib::my_geometry::{Diamond, Line};
-use my_lib::my_point::Point;
+use my_lib::my_geometry::{my_diamond::Diamond, my_line::Line, my_point::Point};
 
 #[derive(Debug, Clone, Copy)]
 struct SensorBeacon {
@@ -21,8 +20,8 @@ impl From<&str> for SensorBeacon {
             .split_once(", y=")
             .map(|(x, y)| {
                 Point::from((
-                    x.parse::<i32>().expect("bad input"),
-                    y.parse::<i32>().expect("bad input"),
+                    x.parse::<i64>().expect("bad input"),
+                    y.parse::<i64>().expect("bad input"),
                 ))
             })
             .unwrap();
@@ -30,8 +29,8 @@ impl From<&str> for SensorBeacon {
             .split_once(", y=")
             .map(|(x, y)| {
                 Point::from((
-                    x.parse::<i32>().expect("bad input"),
-                    y.parse::<i32>().expect("bad input"),
+                    x.parse::<i64>().expect("bad input"),
+                    y.parse::<i64>().expect("bad input"),
                 ))
             })
             .unwrap();
@@ -42,13 +41,13 @@ impl From<&str> for SensorBeacon {
     }
 }
 
-fn calc_scanned_positions_of_row(sensor_beacons: &[SensorBeacon], row: i32) -> i32 {
-    let mut min_x = i32::MAX;
-    let mut max_x = i32::MIN;
+fn calc_scanned_positions_of_row(sensor_beacons: &[SensorBeacon], row: i64) -> i64 {
+    let mut min_x = i64::MAX;
+    let mut max_x = i64::MIN;
     let mut sensor_beacons_in_row: Vec<Point> = Vec::with_capacity(sensor_beacons.len());
     let row_line = Line::new(0, 1, -row);
     for sb in sensor_beacons.iter() {
-        let mut intersection_x: Vec<i32> = sb
+        let mut intersection_x: Vec<i64> = sb
             .sensor
             .diamond_line_intersection(&row_line)
             .iter()
@@ -77,7 +76,7 @@ fn calc_scanned_positions_of_row(sensor_beacons: &[SensorBeacon], row: i32) -> i
     max_x - min_x + 1 - count_sensor_beacons_in_range
 }
 
-fn find_distress_beacon(sensor_beacons: &[SensorBeacon], max_range: i32, x_factor: i64) -> i64 {
+fn find_distress_beacon(sensor_beacons: &[SensorBeacon], max_range: i64, x_factor: i64) -> i64 {
     let mut distress_beacons: Vec<Point> = Vec::new();
     for (i, sb_1) in sensor_beacons.iter().enumerate() {
         for sb_2 in sensor_beacons.iter().skip(i + 1) {
@@ -98,7 +97,7 @@ fn find_distress_beacon(sensor_beacons: &[SensorBeacon], max_range: i32, x_facto
         }
     }
     assert_eq!(distress_beacons.len(), 1);
-    (distress_beacons[0].x as i64) * x_factor + distress_beacons[0].y as i64
+    distress_beacons[0].x * x_factor + distress_beacons[0].y
 }
 
 pub fn day_15() -> Result<()> {
