@@ -15,4 +15,5 @@ all = ["short-run-time", "long-run-time"]
 anyhow = "1.0.79"
 evalexpr = "11.3.0"
 my_lib = { path = "../mylib" }
+num = "0.4.1"
 petgraph = "0.6.4"
