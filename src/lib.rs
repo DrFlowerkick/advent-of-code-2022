@@ -27,6 +27,8 @@ pub fn run() -> Result<()> {
     days::day_20::day_20()?;
     days::day_21::day_21()?;
     days::day_22::day_22()?;
+    days::day_23::day_23()?;
+    days::day_24::day_24()?;
 
     Ok(())
 }
