@@ -1,10 +1,10 @@
 //!day_24.rs
 
 use anyhow::Result;
-use num::integer::lcm;
-use std::collections::BTreeSet;
-
 use my_lib::{my_compass::Compass, my_geometry::my_point::Point};
+use num::integer::lcm;
+use std::cmp::Ordering;
+use std::collections::BTreeSet;
 
 #[derive(Default)]
 struct BlizzardVale {
@@ -86,12 +86,46 @@ impl BlizzardVale {
     }
 }
 
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
+#[derive(Clone, Copy, PartialEq, Eq)]
 struct ExpeditionState {
     minutes: i64,
     x: i64,
     y: i64,
     phase: i64,
+}
+
+impl PartialOrd for ExpeditionState {
+    fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
+        Some(self.cmp(other))
+    }
+}
+
+impl Ord for ExpeditionState {
+    fn cmp(&self, other: &Self) -> Ordering {
+        // prefer greater phase
+        match other.phase.cmp(&self.phase) {
+            Ordering::Greater => Ordering::Greater,
+            Ordering::Less => Ordering::Less,
+            Ordering::Equal => match self.minutes.cmp(&other.minutes) {
+                Ordering::Greater => Ordering::Greater,
+                Ordering::Less => Ordering::Less,
+                Ordering::Equal => {
+                    // even if true -> prefer bigger values, else lower values
+                    let phase_check = self.phase & 1 == 0;
+                    let (a, b) = if phase_check {
+                        (*other, *self)
+                    } else {
+                        (*self, *other)
+                    };
+                    match a.x.cmp(&b.x) {
+                        Ordering::Greater => Ordering::Greater,
+                        Ordering::Less => Ordering::Less,
+                        Ordering::Equal => a.y.cmp(&b.y),
+                    }
+                }
+            },
+        }
+    }
 }
 
 impl ExpeditionState {
