@@ -4,7 +4,7 @@ use anyhow::Result;
 use my_lib::{my_compass::Compass, my_geometry::my_point::Point};
 use num::integer::lcm;
 use std::cmp::Ordering;
-use std::collections::BTreeSet;
+use std::collections::{BTreeSet, HashSet};
 
 #[derive(Default)]
 struct BlizzardVale {
@@ -86,7 +86,7 @@ impl BlizzardVale {
     }
 }
 
-#[derive(Clone, Copy, PartialEq, Eq)]
+#[derive(Clone, Copy, PartialEq, Eq, Hash)]
 struct ExpeditionState {
     minutes: i64,
     x: i64,
@@ -167,7 +167,7 @@ impl ExpeditionState {
     fn shortest_path_expedition(&mut self, blizzard_vale: &BlizzardVale, num_phases: i64) -> i64 {
         let mut queue: BTreeSet<Self> = BTreeSet::new();
         queue.insert(*self);
-        let mut seen: Vec<Self> = Vec::new();
+        let mut seen: HashSet<Self> = HashSet::new();
         let mut current_phase = self.phase;
         while let Some(mut current_state) = queue.pop_first() {
             if current_state.phase < current_phase {
@@ -187,7 +187,7 @@ impl ExpeditionState {
                         *self = phase_end_state;
                         return new_state.minutes;
                     }
-                    seen.push(phase_end_state);
+                    seen.insert(phase_end_state);
                     queue.insert(phase_end_state);
                     current_phase = phase_end_state.phase;
                     continue;
@@ -204,7 +204,7 @@ impl ExpeditionState {
                     continue;
                 }
 
-                seen.push(seen_state);
+                seen.insert(seen_state);
                 queue.insert(new_state);
             }
         }

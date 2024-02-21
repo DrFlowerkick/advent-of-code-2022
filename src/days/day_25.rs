@@ -149,7 +149,7 @@ pub fn day_25() -> Result<()> {
     let input = include_str!("../../assets/day_25.txt");
     let result_part1: i64 = input.lines().map(|l| Base5Num::from(l).to_dezimal()).sum();
     let result_part1 = format!("{}", Base5Num::from_dezimal(result_part1));
-    println!("result day 24 part 1: {}", result_part1);
+    println!("result day 25 part 1: {}", result_part1);
     assert_eq!(result_part1, String::from("20=02=120-=-2110-0=1"));
     Ok(())
 }
@@ -227,7 +227,7 @@ mod tests {
         let result_part1: i64 = input.lines().map(|l| Base5Num::from(l).to_dezimal()).sum();
         assert_eq!(result_part1, 4_890);
         let result_part1 = format!("{}", Base5Num::from_dezimal(result_part1));
-        println!("result example day 24 part 1: {}", result_part1);
+        println!("result example day 25 part 1: {}", result_part1);
         assert_eq!(result_part1, String::from("2=-1=0"));
 
         Ok(())

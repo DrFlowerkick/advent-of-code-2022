@@ -3,16 +3,17 @@
 use anyhow::Result;
 use my_lib::my_geometry::my_point::Point;
 use std::cmp::Ordering;
+use std::collections::HashSet;
 
 struct RockAndSand {
-    rocks: Vec<Point>,
-    sand: Vec<Point>,
+    rocks: HashSet<Point>,
+    sand: HashSet<Point>,
     start_of_sand: Point,
 }
 
 impl From<&str> for RockAndSand {
     fn from(value: &str) -> Self {
-        let mut rocks: Vec<Point> = Vec::new();
+        let mut rocks: HashSet<Point> = HashSet::new();
         for line in value.lines() {
             let mut rock_corners_iter = line.split(" -> ").filter_map(|rc| {
                 rc.split_once(',').map(|(x, y)| {
@@ -23,7 +24,7 @@ impl From<&str> for RockAndSand {
                 })
             });
             let mut current_corner = rock_corners_iter.next().unwrap();
-            rocks.push(current_corner);
+            rocks.insert(current_corner);
             for rock_corner in rock_corners_iter {
                 let direction = match (
                     current_corner.x.cmp(&rock_corner.x),
@@ -38,7 +39,7 @@ impl From<&str> for RockAndSand {
                 loop {
                     current_corner = current_corner.add(direction);
                     if !rocks.contains(&current_corner) {
-                        rocks.push(current_corner);
+                        rocks.insert(current_corner);
                     }
                     if current_corner == rock_corner {
                         break;
@@ -49,7 +50,7 @@ impl From<&str> for RockAndSand {
 
         Self {
             rocks,
-            sand: Vec::new(),
+            sand: HashSet::new(),
             start_of_sand: Point::new(500, 0),
         }
     }
@@ -118,7 +119,7 @@ impl RockAndSand {
             if into_the_abyss {
                 break;
             }
-            self.sand.push(new_sand);
+            self.sand.insert(new_sand);
             if new_sand == self.start_of_sand {
                 break;
             }
@@ -133,16 +134,11 @@ pub fn day_14() -> Result<()> {
     let result_part1 = rock_and_sand.pouring_sand(false);
     println!("result day 14 part 1: {}", result_part1);
     assert_eq!(result_part1, 1_068);
-    #[cfg(feature = "long-run-time")]
-    {
-        let result_part2 = rock_and_sand.pouring_sand(true);
-        println!("result day 14 part 2: {}", result_part2);
-        assert_eq!(result_part2, 27_936);
-    }
-    #[cfg(not(feature = "long-run-time"))]
-    {
-        println!("day 14 part 2 skipped because of long run time")
-    }
+
+    let result_part2 = rock_and_sand.pouring_sand(true);
+    println!("result day 14 part 2: {}", result_part2);
+    assert_eq!(result_part2, 27_936);
+    
     Ok(())
 }
 
